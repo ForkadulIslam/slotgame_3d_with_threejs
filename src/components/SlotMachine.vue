@@ -32,7 +32,6 @@ let topScene, topCamera, bottomScene, bottomCamera;
 let model, mixer, controls, sun;
 let animationId;
 let autoRotate = false;
-let animateEnvironment = null;
 
 // Store model info for camera calculations
 let modelBoundingBox = new THREE.Box3();
@@ -131,50 +130,7 @@ const initSky = () => {
 };
 
 
-const createMagicLamp = () => {
-  // --- Lamp Base ---
-  const lampBaseGeo = new THREE.CylinderGeometry(0.18, 0.25, 0.3, 32);
-  const lampBaseMat = new THREE.MeshStandardMaterial({
-    color: 0xffd700, // gold
-    metalness: 1,
-    roughness: 0.2,
-  });
-  const lampBase = new THREE.Mesh(lampBaseGeo, lampBaseMat);
-  lampBase.castShadow = true;
-  lampBase.receiveShadow = true;
 
-  // --- Lamp Position (Left side of top scene) ---
-  lampBase.position.set(-1.3, -0.5, .05); 
-  topScene.add(lampBase);
-
-  // --- Magical Flame ---
-  const flameGeo = new THREE.ConeGeometry(0.15, 0.5, 32);
-  const flameMat = new THREE.MeshStandardMaterial({
-    color: 0xff6a00,
-    emissive: 0xff4500,
-    emissiveIntensity: 2,
-    transparent: true,
-    opacity: 0.85,
-  });
-
-  const flame = new THREE.Mesh(flameGeo, flameMat);
-  flame.position.set(0, 0.45, 0);
-  flame.rotation.x = Math.PI;
-
-  lampBase.add(flame);
-
-  // --- Flame Flicker Animation (store in animateEnvironment) ---
-  let t = 0;
-  animateEnvironment = () => {
-    t += 0.08;
-    const scale = 1 + Math.sin(t) * 0.15;
-    flame.scale.set(1, scale, 1);
-
-    // Mild flickering color
-    flame.material.emissiveIntensity =
-      1.8 + Math.sin(Date.now() * 0.005) * 0.6;
-  };
-};
 
 
 const setupWarriorLighting = () => {
@@ -255,7 +211,6 @@ const loadModel = () => {
     // Set up initial camera position
     setupCameraForCurrentMode();
     
-    createMagicLamp();
     isLoading.value = false;
   }, undefined, (error) => {
     console.error('Error loading model:', error);
@@ -353,7 +308,7 @@ const animate = () => {
     controls.update();
   }
 
-  if (animateEnvironment) animateEnvironment();
+
 
   // --- Viewport Calculation ---
   const width = window.innerWidth;
