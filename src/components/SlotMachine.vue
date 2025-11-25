@@ -31,6 +31,7 @@ let topScene, topCamera, bottomScene, bottomCamera;
 let model, mixer, controls;
 let animationId;
 let autoRotate = false;
+let animateEnvironment = null;
 
 // Store model info for camera calculations
 let modelBoundingBox = new THREE.Box3();
@@ -47,11 +48,14 @@ const initThreeJS = () => {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
   renderer.setScissorTest(true);
 
   // --- Top Scene (Model) - Enhanced Ancient Theme ---
   topScene = new THREE.Scene();
   topScene.background = new THREE.Color(0x0a0a1a); // Darker blue for ancient feel
+  topScene.fog = new THREE.Fog(topScene.background, 10, 30); // Add fog for depth and atmosphere
   topCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
   
   // Enhanced lighting for ancient warrior
@@ -87,9 +91,56 @@ const initThreeJS = () => {
   animate();
 };
 
+
+const createMagicLamp = () => {
+  // --- Lamp Base ---
+  const lampBaseGeo = new THREE.CylinderGeometry(0.18, 0.25, 0.3, 32);
+  const lampBaseMat = new THREE.MeshStandardMaterial({
+    color: 0xffd700, // gold
+    metalness: 1,
+    roughness: 0.2,
+  });
+  const lampBase = new THREE.Mesh(lampBaseGeo, lampBaseMat);
+  lampBase.castShadow = true;
+  lampBase.receiveShadow = true;
+
+  // --- Lamp Position (Left side of top scene) ---
+  lampBase.position.set(-1.3, -0.5, .05); 
+  topScene.add(lampBase);
+
+  // --- Magical Flame ---
+  const flameGeo = new THREE.ConeGeometry(0.15, 0.5, 32);
+  const flameMat = new THREE.MeshStandardMaterial({
+    color: 0xff6a00,
+    emissive: 0xff4500,
+    emissiveIntensity: 2,
+    transparent: true,
+    opacity: 0.85,
+  });
+
+  const flame = new THREE.Mesh(flameGeo, flameMat);
+  flame.position.set(0, 0.45, 0);
+  flame.rotation.x = Math.PI;
+
+  lampBase.add(flame);
+
+  // --- Flame Flicker Animation (store in animateEnvironment) ---
+  let t = 0;
+  animateEnvironment = () => {
+    t += 0.08;
+    const scale = 1 + Math.sin(t) * 0.15;
+    flame.scale.set(1, scale, 1);
+
+    // Mild flickering color
+    flame.material.emissiveIntensity =
+      1.8 + Math.sin(Date.now() * 0.005) * 0.6;
+  };
+};
+
+
 const setupWarriorLighting = () => {
-  // Main light - golden from top-right
-  const mainLight = new THREE.DirectionalLight(0xffd700, 1.2);
+  // Main light - stronger golden key light
+  const mainLight = new THREE.DirectionalLight(0xffd700, 2.0);
   mainLight.position.set(5, 8, 5);
   mainLight.castShadow = true;
   mainLight.shadow.mapSize.width = 1024;
@@ -98,19 +149,28 @@ const setupWarriorLighting = () => {
   mainLight.shadow.camera.far = 50;
   topScene.add(mainLight);
 
-  // Fill light - warm from left
-  const fillLight = new THREE.DirectionalLight(0xffaa33, 0.4);
+  // Fill light - subtle warm from left
+  const fillLight = new THREE.DirectionalLight(0xffaa33, 0.6);
   fillLight.position.set(-5, 3, 2);
   topScene.add(fillLight);
 
-  // Back light - cool blue for rim
-  const rimLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+  // Back light - cool blue for rim effect
+  const rimLight = new THREE.DirectionalLight(0x4488ff, 0.5);
   rimLight.position.set(0, 3, -5);
   topScene.add(rimLight);
 
-  // Ambient - dark blue for ancient feel
-  const ambientLight = new THREE.AmbientLight(0x223366, 0.3);
-  topScene.add(ambientLight);
+  // Ambient - brighter hemisphere for softer shadows
+  const ambientLight = new THREE.HemisphereLight(0xeeeeff, 0x080820, 1.2);
+topScene.add(ambientLight);
+
+    const heroLight = new THREE.SpotLight(0xffffff, 3.5, 30, Math.PI / 5, 0.3, 1);
+    heroLight.position.set(3, 6, 5);
+    heroLight.target.position.set(0, 1.2, 0); // Target upper part of model
+    heroLight.castShadow = true;
+    heroLight.shadow.mapSize.width = 2048;
+    heroLight.shadow.mapSize.height = 2048;
+    topScene.add(heroLight);
+    topScene.add(heroLight.target);
 };
 
 const loadModel = () => {
@@ -125,17 +185,21 @@ const loadModel = () => {
         node.castShadow = true;
         node.receiveShadow = true;
         
-        // Improve materials for better appearance
-        if (node.material) {
-          node.material.roughness = 0.7;
-          node.material.metalness = 0.4;
-          
-          // Add subtle glow to magical elements
-          if (node.material.name?.toLowerCase().includes('magic') || 
-              node.material.name?.toLowerCase().includes('glow')) {
-            node.material.emissive = new THREE.Color(0x330066);
-            node.material.emissiveIntensity = 0.2;
-          }
+        // More balanced PBR material properties
+        node.material.roughness = 0.4;
+        node.material.metalness = 0.6;
+
+        // Fire-like emissive for glowing areas (names may vary depending on model)
+        if (
+        node.material.name?.toLowerCase().includes("fire") ||
+        node.material.name?.toLowerCase().includes("glow") ||
+        node.material.name?.toLowerCase().includes("energy")
+        ) {
+        
+            node.material.emissive = node.material.emissive || new THREE.Color(0x000000);
+            node.material.emissiveIntensity = 0.25;  
+
+        
         }
       }
     });
@@ -156,6 +220,7 @@ const loadModel = () => {
     // Set up initial camera position
     setupCameraForCurrentMode();
     
+    createMagicLamp();
     isLoading.value = false;
   }, undefined, (error) => {
     console.error('Error loading model:', error);
@@ -252,6 +317,8 @@ const animate = () => {
   if (controls.enabled) {
     controls.update();
   }
+
+  if (animateEnvironment) animateEnvironment();
 
   // --- Viewport Calculation ---
   const width = window.innerWidth;
