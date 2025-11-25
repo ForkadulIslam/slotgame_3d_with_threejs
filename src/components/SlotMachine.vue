@@ -49,7 +49,7 @@ const initThreeJS = () => {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 3;
   renderer.setScissorTest(true);
 
   // --- Top Scene (Model) - Enhanced Ancient Theme ---
@@ -141,11 +141,11 @@ const createMagicLamp = () => {
 const setupWarriorLighting = () => {
   // Main light - stronger golden key light
   const mainLight = new THREE.DirectionalLight(0xffd700, 2.0);
-  mainLight.position.set(5, 8, 5);
+  mainLight.position.set(1, 1, 1);
   mainLight.castShadow = true;
   mainLight.shadow.mapSize.width = 1024;
   mainLight.shadow.mapSize.height = 1024;
-  mainLight.shadow.camera.near = 0.5;
+  mainLight.shadow.camera.near = 1;
   mainLight.shadow.camera.far = 50;
   topScene.add(mainLight);
 
@@ -156,15 +156,20 @@ const setupWarriorLighting = () => {
 
   // Back light - cool blue for rim effect
   const rimLight = new THREE.DirectionalLight(0x4488ff, 0.5);
-  rimLight.position.set(0, 3, -5);
+  rimLight.position.set(1, 3, -5);
   topScene.add(rimLight);
 
-  // Ambient - brighter hemisphere for softer shadows
-  const ambientLight = new THREE.HemisphereLight(0xeeeeff, 0x080820, 1.2);
-topScene.add(ambientLight);
+  // Ambient - hemisphere for base color
+  const hemisphereLight = new THREE.HemisphereLight(0xeeeeff, 0x080820, 1.0);
+  topScene.add(hemisphereLight);
 
-    const heroLight = new THREE.SpotLight(0xffffff, 3.5, 30, Math.PI / 5, 0.3, 1);
-    heroLight.position.set(3, 6, 5);
+  // Added: A general ambient light to lift the darkest shadows
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+  topScene.add(ambientLight);
+
+    // Spotlight - powerful hero light with a wider angle
+    const heroLight = new THREE.SpotLight(0xffffff, 3.5, 35, Math.PI / 4, 0.2, 1);
+    heroLight.position.set(3, 7, 5); // Raised slightly
     heroLight.target.position.set(0, 1.2, 0); // Target upper part of model
     heroLight.castShadow = true;
     heroLight.shadow.mapSize.width = 2048;
