@@ -18,6 +18,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { Sky } from 'three/examples/jsm/objects/Sky.js';
 
 // --- State ---
 const isLoading = ref(true);
@@ -28,7 +29,7 @@ const gameCanvas = ref(null);
 // --- Core Three.js ---
 let renderer, clock;
 let topScene, topCamera, bottomScene, bottomCamera;
-let model, mixer, controls;
+let model, mixer, controls, sun;
 let animationId;
 let autoRotate = false;
 let animateEnvironment = null;
@@ -49,14 +50,14 @@ const initThreeJS = () => {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 3;
+  renderer.toneMappingExposure = 1.5;
   renderer.setScissorTest(true);
 
   // --- Top Scene (Model) - Enhanced Ancient Theme ---
   topScene = new THREE.Scene();
-  topScene.background = new THREE.Color(0x0a0a1a); // Darker blue for ancient feel
-  topScene.fog = new THREE.Fog(topScene.background, 10, 30); // Add fog for depth and atmosphere
   topCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+  
+  initSky();
   
   // Enhanced lighting for ancient warrior
   setupWarriorLighting();
@@ -89,6 +90,44 @@ const initThreeJS = () => {
   loadModel();
   handleResize();
   animate();
+};
+
+
+const initSky = () => {
+  sun = new THREE.Vector3();
+
+  const sky = new Sky();
+  sky.scale.setScalar(1000);
+  
+  const effectController = {
+    turbidity: 40,         // Much more haze/dust, darker sky
+    rayleigh: 8,           // Even more red scattering
+    mieCoefficient: 0.05,  // Much brighter, more defined sun halo
+    mieDirectionalG: 0.9,  // More focused sun halo
+    elevation: 0,          // Sun exactly on the horizon
+    azimuth: 180,
+  };
+
+  const uniforms = sky.material.uniforms;
+  uniforms['turbidity'].value = effectController.turbidity;
+  uniforms['rayleigh'].value = effectController.rayleigh;
+  uniforms['mieCoefficient'].value = effectController.mieCoefficient;
+  uniforms['mieDirectionalG'].value = effectController.mieDirectionalG;
+
+  const phi = THREE.MathUtils.degToRad(90 - effectController.elevation);
+  const theta = THREE.MathUtils.degToRad(effectController.azimuth);
+
+  sun.setFromSphericalCoords(1, phi, theta);
+  uniforms['sunPosition'].value.copy(sun);
+
+  // Use a temporary scene to generate the environment map
+  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  const tempScene = new THREE.Scene();
+  tempScene.add(sky);
+  const renderTarget = pmremGenerator.fromScene(tempScene);
+  
+  topScene.environment = renderTarget.texture;
+  topScene.background = renderTarget.texture;
 };
 
 
@@ -139,9 +178,9 @@ const createMagicLamp = () => {
 
 
 const setupWarriorLighting = () => {
-  // Main light - stronger golden key light
-  const mainLight = new THREE.DirectionalLight(0xffd700, 2.0);
-  mainLight.position.set(1, 1, 1);
+  // 1. BACKLIGHT (The Sun) - creates a rim light effect from the sunset
+  const mainLight = new THREE.DirectionalLight(0xffd700, 1.5);
+  mainLight.position.copy(sun);
   mainLight.castShadow = true;
   mainLight.shadow.mapSize.width = 1024;
   mainLight.shadow.mapSize.height = 1024;
@@ -149,33 +188,24 @@ const setupWarriorLighting = () => {
   mainLight.shadow.camera.far = 50;
   topScene.add(mainLight);
 
-  // Fill light - subtle warm from left
-  const fillLight = new THREE.DirectionalLight(0xffaa33, 0.6);
-  fillLight.position.set(-5, 3, 2);
-  topScene.add(fillLight);
-
-  // Back light - cool blue for rim effect
-  const rimLight = new THREE.DirectionalLight(0x4488ff, 0.5);
-  rimLight.position.set(1, 3, -5);
-  topScene.add(rimLight);
-
-  // Ambient - hemisphere for base color
-  const hemisphereLight = new THREE.HemisphereLight(0xeeeeff, 0x080820, 1.0);
+  // 2. AMBIENT FILL - simulates general bounced light from the environment
+  const hemisphereLight = new THREE.HemisphereLight(0x443355, 0x885533, 0.6); // Slightly toned down
   topScene.add(hemisphereLight);
 
-  // Added: A general ambient light to lift the darkest shadows
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
-  topScene.add(ambientLight);
-
-    // Spotlight - powerful hero light with a wider angle
-    const heroLight = new THREE.SpotLight(0xffffff, 3.5, 35, Math.PI / 4, 0.2, 1);
-    heroLight.position.set(3, 7, 5); // Raised slightly
-    heroLight.target.position.set(0, 1.2, 0); // Target upper part of model
-    heroLight.castShadow = true;
-    heroLight.shadow.mapSize.width = 2048;
-    heroLight.shadow.mapSize.height = 2048;
-    topScene.add(heroLight);
-    topScene.add(heroLight.target);
+  // 3. KEY LIGHT (Hero Light) - a more intense and focused main light for the front
+  const heroLight = new THREE.SpotLight(0xffeedd, 3.5, 45, Math.PI / 5, 0.4, 1);
+  heroLight.position.set(2, 5, 5); // Raised higher
+  heroLight.target.position.set(0, 1.2, 0);
+  heroLight.castShadow = true;
+  heroLight.shadow.mapSize.width = 2048;
+  heroLight.shadow.mapSize.height = 2048;
+  topScene.add(heroLight);
+  topScene.add(heroLight.target);
+  
+  // 4. BOUNCE FILL - a soft light from the front-left to soften shadows
+  const bounceLight = new THREE.DirectionalLight(0xffaa55, 0.6);
+  bounceLight.position.set(-3, 2, 5);
+  topScene.add(bounceLight);
 };
 
 const loadModel = () => {
