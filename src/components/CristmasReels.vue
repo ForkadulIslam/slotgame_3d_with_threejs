@@ -49,7 +49,7 @@ class Ornament {
     this.font = font;
     this.material = new THREE.MeshPhongMaterial({
       map: this.texture,
-      shininess: 120,
+      shininess: 20,
     });
     this.addItems();
   }
@@ -101,18 +101,18 @@ class Ornament {
     this.base.rotation.z = angle;
   }
   addText() {
-    const text = this.text;
-    const geometry = new TextGeometry(text, {
-      font: this.font,
-      size: 2.2,
-      height: 0.4,
-      curveSegments: 12,
-    });
-    const mesh = new THREE.Mesh(geometry, this.material);
-    mesh.position.z = 4;
-    mesh.position.x = text.length === 1 ? -0.8 : -1.2;
-    mesh.position.y = -1;
-    this.item.add(mesh);
+    // const text = this.text;
+    // const geometry = new TextGeometry(text, {
+    //   font: this.font,
+    //   size: 2.2,
+    //   height: 0.4,
+    //   curveSegments: 12,
+    // });
+    // const mesh = new THREE.Mesh(geometry, this.material);
+    // mesh.position.z = 4;
+    // mesh.position.x = text.length === 1 ? -0.8 : -1.2;
+    // mesh.position.y = -1;
+    // this.item.add(mesh);
   }
 }
 
@@ -192,7 +192,7 @@ onMounted(() => {
 
   function addLights() {
     const color = 0xffffff;
-    const intensity = 0.9;
+    const intensity = 1.9;
     const light = new THREE.DirectionalLight(color, intensity);
     light.position.set(0, 0, 80);
     scene.add(light);
@@ -223,7 +223,7 @@ onMounted(() => {
     
     loadTextures();
     
-    [[3, 9], [0, 9], [-3, 10]].forEach(([row, num]) => {
+    [[4.5, 6], [1.5, 6], [-1.5, 6], [-4.5, 6]].forEach(([row, num]) => {
       addTube(row);
       addOrnaments(num, row * 10);
     });
@@ -275,14 +275,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
-body{
-    margin: 0;
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #000;
+.canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
-
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 </style>
