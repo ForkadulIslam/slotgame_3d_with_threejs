@@ -49,7 +49,7 @@ class Ornament {
     this.font = font;
     this.material = new THREE.MeshPhongMaterial({
       map: this.texture,
-      shininess: 20,
+      shininess: 120, // Changed from 20 to 120
     });
     this.addItems();
   }
@@ -58,7 +58,6 @@ class Ornament {
     this.addLine();
     this.addCylynder();
     this.addRing();
-    this.addText();
   }
   addBall() {
     const geometry = new THREE.SphereGeometry(4, 20, 20);
@@ -98,22 +97,9 @@ class Ornament {
   update(time) {
     const angle = map(sin(time + this.phase), -1, 1, -rad(5), rad(5));
     this.item.rotation.y = angle * 3;
-    this.base.rotation.z = angle;
+    //this.base.rotation.z = angle;
   }
-  addText() {
-    // const text = this.text;
-    // const geometry = new TextGeometry(text, {
-    //   font: this.font,
-    //   size: 2.2,
-    //   height: 0.4,
-    //   curveSegments: 12,
-    // });
-    // const mesh = new THREE.Mesh(geometry, this.material);
-    // mesh.position.z = 4;
-    // mesh.position.x = text.length === 1 ? -0.8 : -1.2;
-    // mesh.position.y = -1;
-    // this.item.add(mesh);
-  }
+
 }
 
 onMounted(() => {
@@ -192,7 +178,7 @@ onMounted(() => {
 
   function addLights() {
     const color = 0xffffff;
-    const intensity = 1.9;
+    const intensity = 0.9;
     const light = new THREE.DirectionalLight(color, intensity);
     light.position.set(0, 0, 80);
     scene.add(light);
