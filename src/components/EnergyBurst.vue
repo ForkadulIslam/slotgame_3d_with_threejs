@@ -1,144 +1,36 @@
-<style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-        background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-        font-family: 'Arial', sans-serif;
-        overflow: hidden;
-        cursor: none;
-    }
-    canvas { display: block; }
-    
-    .ui-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 1000;
-    }
-    
-    .title {
-        position: absolute;
-        top: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #fff;
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-        text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
-        opacity: 0.9;
-        letter-spacing: 2px;
-    }
-    
-    .spirit-button {
-        position: absolute;
-        bottom: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 12px 24px;
-        background: rgba(0, 0, 0, 0.6);
-        border: 2px solid transparent;
-        border-radius: 8px;
-        color: #fff;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        pointer-events: all;
-        backdrop-filter: blur(15px);
-        transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        overflow: hidden;
-    }
-    
-    .spirit-button::before {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00, #00ffff);
-        background-size: 400% 400%;
-        border-radius: 10px;
-        z-index: -1;
-        animation: borderGlow 3s ease-in-out infinite;
-    }
-    
-    .spirit-button::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        border-radius: 6px;
-        z-index: -1;
-    }
-    
-    @keyframes borderGlow {
-        0%, 100% {
-            background-position: 0% 50%;
-        }
-        50% {
-            background-position: 100% 50%;
-        }
-    }
-    
-    .spirit-button:hover {
-        background: rgba(0, 0, 0, 0.8);
-        transform: translateX(-50%) scale(1.02);
-    }
-    
-    .loading {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: #fff;
-        font-size: 18px;
-        text-align: center;
-        opacity: 0.8;
-    }
-    
-    .custom-cursor {
-        position: fixed;
-        width: 20px;
-        height: 20px;
-        background: radial-gradient(circle, rgba(0, 255, 255, 0.8) 0%, transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 2000;
-        mix-blend-mode: screen;
-    }
-</style>
+<template>
+  <div class="canvas-container">
+    <canvas ref="threeCanvas"></canvas>
+    <div class="ui-overlay">
+        <div class="loading" id="loading">Loading Epic Scene...</div>
+        <button class="spirit-button" id="spiritBtn" style="display: none;">RELEASE SPIRIT</button>
+        <div class="custom-cursor" id="cursor"></div>
+    </div>
+  </div>
+</template>
 
-<div class="ui-overlay">
-    <div class="loading" id="loading">Loading Epic Scene...</div>
-    <button class="spirit-button" id="spiritBtn" style="display: none;">RELEASE SPIRIT</button>
-    <div class="custom-cursor" id="cursor"></div>
-</div>
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"
-    }
-}
-</script>
+const threeCanvas = ref(null);
 
-<script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-    import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+    let loadingElement, spiritBtnElement;
+
+
+
+    onMounted(() => {
+
+        loadingElement = document.getElementById('loading');
+
+        spiritBtnElement = document.getElementById('spiritBtn');
+
 
     let scene, camera, renderer, controls, composer, clock;
     let soldier, mixer, animations = {};
@@ -147,10 +39,13 @@
     let isLoaded = false;
 
     const cursor = document.getElementById('cursor');
-    document.addEventListener('mousemove', (e) => {
-        cursor.style.left = e.clientX - 10 + 'px';
-        cursor.style.top = e.clientY - 10 + 'px';
-    });
+    const handleMouseMove = (e) => {
+        if (cursor) {
+            cursor.style.left = e.clientX - 10 + 'px';
+            cursor.style.top = e.clientY - 10 + 'px';
+        }
+    };
+    document.addEventListener('mousemove', handleMouseMove);
 
     const VolumetricLightShader = {
         uniforms: {
@@ -160,7 +55,7 @@
             decay: { value: 0.95 },
             density: { value: 0.8 },
             weight: { value: 0.6 },
-            samples: { value: 100 }
+            samples: { value: 50 }
         },
         vertexShader: `
             varying vec2 vUv;
@@ -257,7 +152,7 @@
         camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 4, 12);
 
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, canvas: threeCanvas.value });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -265,7 +160,7 @@
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
-        document.body.appendChild(renderer.domElement);
+        // document.body.appendChild(renderer.domElement); // Managed by Vue template
 
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
@@ -281,10 +176,13 @@
         await loadSoldier();
         setupPostProcessing();
 
-        document.getElementById('spiritBtn').addEventListener('click', releaseSpiritEffect);
+        const spiritBtn = document.getElementById('spiritBtn');
+        if (spiritBtn) {
+            spiritBtn.addEventListener('click', releaseSpiritEffect);
+        }
         window.addEventListener('resize', onWindowResize);
 
-        animate();
+        renderer.setAnimationLoop(animate);
     }
 
     function createEpicEnvironment() {
@@ -382,7 +280,7 @@
     }
 
     function createAtmosphere() {
-        const particleCount = 3000;
+        const particleCount = 1500;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const velocities = new Float32Array(particleCount * 3);
@@ -446,11 +344,29 @@
     }
 
     async function loadSoldier() {
-        const loader = new GLTFLoader();
+
+
+        const geometry = new THREE.SphereGeometry(1.5, 64, 64);
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x55aaff,
+            roughness: 0.4,
+            metalness: 0.3
+        });
+
+        soldier = new THREE.Mesh(geometry, material);
+        soldier.castShadow = true;
+        soldier.position.set(0, 1.5, 0);
+        scene.add(soldier);
+        
+        isLoaded = true;
+        loadingElement.style.display = "none";
+        spiritBtnElement.style.display = "block";
+        return; 
+        const gltfLoader = new GLTFLoader(); // Use local GLTFLoader variable
         
         try {
             const gltf = await new Promise((resolve, reject) => {
-                loader.load(
+                gltfLoader.load(
                     'https://threejs.org/examples/models/gltf/Soldier.glb',
                     resolve,
                     undefined,
@@ -486,19 +402,24 @@
                 animations['Idle'].play();
             }
 
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('spiritBtn').style.display = 'block';
+            const loadingElement = document.getElementById('loading');
+            const spiritBtnElement = document.getElementById('spiritBtn');
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (spiritBtnElement) spiritBtnElement.style.display = 'block';
             isLoaded = true;
 
             console.log('Soldier loaded successfully!');
 
         } catch (error) {
             console.error('Error loading soldier:', error);
-            document.getElementById('loading').textContent = 'Error loading model. Click to try basic scene.';
-            document.getElementById('loading').style.cursor = 'pointer';
-            document.getElementById('loading').onclick = () => {
-                createFallbackSoldier();
-            };
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.textContent = 'Error loading model. Click to try basic scene.';
+                loadingElement.style.cursor = 'pointer';
+                loadingElement.onclick = () => {
+                    createFallbackSoldier();
+                };
+            }
         }
     }
 
@@ -516,8 +437,10 @@
         soldier.receiveShadow = true;
         scene.add(soldier);
 
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('spiritBtn').style.display = 'block';
+        const loadingElement = document.getElementById('loading');
+        const spiritBtnElement = document.getElementById('spiritBtn');
+        if (loadingElement) loadingElement.style.display = 'none';
+        if (spiritBtnElement) spiritBtnElement.style.display = 'block';
         isLoaded = true;
     }
 
@@ -532,7 +455,7 @@
     }
 
     function createSpiritParticles() {
-        const particleCount = 2000;
+        const particleCount = 1000;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const velocities = new Float32Array(particleCount * 3);
@@ -611,8 +534,10 @@
         });
 
         const magicCircle = new THREE.Mesh(circleGeometry, circleMaterial);
-        magicCircle.position.copy(soldier.position);
-        magicCircle.position.y += 0.1;
+        if (soldier) { // Check if soldier exists before using its position
+            magicCircle.position.copy(soldier.position);
+            magicCircle.position.y += 0.1;
+        }
         magicCircle.rotation.x = -Math.PI / 2;
         magicCircle.userData = { 
             life: 3, 
@@ -635,10 +560,12 @@
 
             const trail = new THREE.Mesh(trailGeometry, trailMaterial);
             const angle = (i / 8) * Math.PI * 2;
-            trail.position.copy(soldier.position);
-            trail.position.x += Math.cos(angle) * 3;
-            trail.position.z += Math.sin(angle) * 3;
-            trail.position.y += 2;
+            if (soldier) { // Check if soldier exists before using its position
+                trail.position.copy(soldier.position);
+                trail.position.x += Math.cos(angle) * 3;
+                trail.position.z += Math.sin(angle) * 3;
+                trail.position.y += 2;
+            }
             
             trail.userData = {
                 life: 2,
@@ -669,12 +596,11 @@
         composer.addPass(volumetricPass);
     }
 
-    function animate() {
-        requestAnimationFrame(animate);
+    function animate(currentTime) { // animationLoop from previous, now just animate
         const delta = clock.getDelta();
         const elapsed = clock.getElapsedTime();
 
-        controls.update();
+        if (controls) controls.update();
 
         if (mixer && isLoaded) {
             mixer.update(delta);
@@ -735,13 +661,14 @@
         });
 
         if (composer) {
-            composer.render();
+            composer.render(delta); // Pass delta to composer.render()
         } else {
             renderer.render(scene, camera);
         }
     }
 
     function onWindowResize() {
+        if (!camera || !renderer) return;
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -749,4 +676,161 @@
             composer.setSize(window.innerWidth, window.innerHeight);
         }
     }
+
+    onUnmounted(() => {
+        document.removeEventListener('mousemove', handleMouseMove); // Remove mousemove listener
+        window.removeEventListener("resize", onWindowResize); // Remove resize listener
+        
+        if(renderer) {
+            renderer.setAnimationLoop(null);
+            renderer.dispose();
+        }
+        if (scene) {
+            scene.traverse(object => {
+                // Dispose geometries and materials
+                if (object.geometry) object.geometry.dispose();
+                if (object.material) {
+                    if (Array.isArray(object.material)) {
+                        object.material.forEach(material => material.dispose());
+                    } else {
+                        object.material.dispose();
+                    }
+                }
+            });
+        }
+        // Dispose any other resources like textures or render targets if present
+        // textures.forEach(t => t.dispose()); // Not used in this new setup
+    });
+});
 </script>
+
+<style scoped>
+.canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* CSS from error_logs.md */
+body {
+    background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+    cursor: none;
+}
+
+.ui-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.title {
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+    opacity: 0.9;
+    letter-spacing: 2px;
+}
+
+.spirit-button {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: all;
+    backdrop-filter: blur(15px);
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    overflow: hidden;
+}
+
+.spirit-button::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00, #00ffff);
+    background-size: 400% 400%;
+    border-radius: 10px;
+    z-index: -1;
+    animation: borderGlow 3s ease-in-out infinite;
+}
+
+.spirit-button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 6px;
+    z-index: -1;
+}
+
+@keyframes borderGlow {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+.spirit-button:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: translateX(-50%) scale(1.02);
+}
+
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 18px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.custom-cursor {
+    position: fixed;
+    width: 20px;
+    height: 20px;
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.8) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2000;
+    mix-blend-mode: screen;
+}
+</style>
