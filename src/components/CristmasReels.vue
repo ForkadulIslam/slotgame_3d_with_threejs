@@ -13,6 +13,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 const threeCanvas = ref(null);
 const { sin } = Math;
+const emit = defineEmits(['ball-clicked']);
 
 // Helper functions from the original script
 const map = (value, sMin, sMax, dMin, dMax) => {
@@ -62,6 +63,7 @@ class Ornament {
   addBall() {
     const geometry = new THREE.SphereGeometry(4, 20, 20);
     const ball = new THREE.Mesh(geometry, this.material);
+    ball.userData.ornament = this; // Link back to the parent ornament object
     this.item.add(ball);
   }
   addCylynder() {
@@ -106,6 +108,34 @@ onMounted(() => {
   let camera, controls, scene, renderer, loader, font;
   let textures = [];
   let ornaments = [];
+  
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+
+  function onClick(event) {
+    // Calculate mouse position in normalized device coordinates
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    if (intersects.length > 0) {
+        const firstIntersect = intersects[0].object;
+        if (firstIntersect.userData.ornament) {
+            emit('ball-clicked');
+            const ornament = firstIntersect.userData.ornament;
+            // Simple jump animation
+            if(ornament.item.position.y === ornament.length){
+                 ornament.item.position.y += 2;
+                 setTimeout(() => {
+                     ornament.item.position.y = ornament.length;
+                 }, 200);
+            }
+        }
+    }
+  }
   
   const fontLoader = new FontLoader();
   fontLoader.load("https://assets.codepen.io/3685267/droid_sans_bold.typeface.json", function (fontx) {
@@ -217,6 +247,7 @@ onMounted(() => {
     addLights();
     addPlane();
     
+    renderer.domElement.addEventListener('click', onClick);
     window.addEventListener("resize", onWindowResize, false);
     
     renderer.setAnimationLoop(animationLoop);
@@ -240,6 +271,7 @@ onMounted(() => {
   onUnmounted(() => {
     window.removeEventListener("resize", onWindowResize);
     if(renderer) {
+        renderer.domElement.removeEventListener('click', onClick);
         renderer.setAnimationLoop(null);
         renderer.dispose();
     }
