@@ -2,12 +2,17 @@
   <div id="app">
     <!-- <SlotMachine /> -->
     <!-- <BurningSatellite /> -->
-    <CristmasReels />
+    <!-- <CristmasReels /> -->
+    <DynamicParticles/>
+
   </div>
 </template>
 
 <script setup>
 // import SlotMachine from './components/SlotMachine.vue';
 // import BurningSatellite from './components/BurningSatellite.vue';
-import CristmasReels from './components/CristmasReels.vue';
+//import CristmasReels from './components/CristmasReels.vue';
+//import CelebrationScreen from './components/CelebrationScreen.vue';
+import DynamicParticles from './components/DynamicParticles.vue';
+
 </script>

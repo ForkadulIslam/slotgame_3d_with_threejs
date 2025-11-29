@@ -408,7 +408,7 @@ class EpicScene {
             this.loadingElement = document.createElement('div');
             this.loadingElement.id = 'epicSceneLoading';
             this.loadingElement.className = 'loading';
-            this.loadingElement.textContent = 'Loading Epic Scene...';
+            this.loadingElement.textContent = 'BIG WIN: 300';
             this.loadingElement.style.cssText = `
                 position: absolute;
                 top: 50%;
@@ -481,6 +481,7 @@ class EpicScene {
     releaseSpiritEffect() {
         if (!this.soldier) return;
 
+        this.effectTriggered = true;
         this.createSpiritParticles();
         this.createMagicCircle();
         this.createEnergyTrails();
@@ -679,6 +680,13 @@ class EpicScene {
                 this.energyTrails.splice(index, 1);
             }
         });
+
+        // Check for theme transition
+        if (this.effectTriggered && this.theme === 'blue' && this.spiritParticles.length === 0 && this.magicCircles.length === 0 && this.energyTrails.length === 0) {
+            this.theme = 'golden';
+            this.createGoldenCinematicLighting();
+            this.createGoldenAtmosphere();
+        }
 
         if (this.composer) {
             this.composer.render(delta);
