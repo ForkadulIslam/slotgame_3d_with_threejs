@@ -10,10 +10,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+import EpicScene from '../composables/epicScene.js';
 
 const threeCanvas = ref(null);
 const { sin } = Math;
-const emit = defineEmits(['ball-clicked']);
 
 // Helper functions from the original script
 const map = (value, sMin, sMax, dMin, dMax) => {
@@ -124,15 +124,16 @@ onMounted(() => {
     if (intersects.length > 0) {
         const firstIntersect = intersects[0].object;
         if (firstIntersect.userData.ornament) {
-            emit('ball-clicked');
-            const ornament = firstIntersect.userData.ornament;
-            // Simple jump animation
-            if(ornament.item.position.y === ornament.length){
-                 ornament.item.position.y += 2;
-                 setTimeout(() => {
-                     ornament.item.position.y = ornament.length;
-                 }, 200);
+            // Stop the CristmasReels animation loop
+            if (renderer) {
+                renderer.setAnimationLoop(null);
             }
+            
+            // Instantiate and start EpicScene
+            const epicScene = new EpicScene(threeCanvas.value, { autoStart: true, showUI: true });
+            
+            // Trigger the celebration effect
+            epicScene.releaseSpiritEffect();
         }
     }
   }
