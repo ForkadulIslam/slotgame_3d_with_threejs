@@ -151,7 +151,7 @@ onMounted(() => {
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, canvas: threeCanvas.value });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(1);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.2;
         renderer.shadowMap.enabled = true;

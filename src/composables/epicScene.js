@@ -52,7 +52,7 @@ class EpicScene {
             decay: { value: 0.95 },
             density: { value: 0.8 },
             weight: { value: 0.6 },
-            samples: { value: 50 }
+            samples: { value: 10 } // OPTIMIZATION: Reduced from 50 to 10 for mobile performance
         },
         vertexShader: `
             varying vec2 vUv;
@@ -269,8 +269,8 @@ class EpicScene {
         const keyLight = new THREE.DirectionalLight(0xffffff, 3.5);
         keyLight.position.set(20, 30, 10);
         keyLight.castShadow = true;
-        keyLight.shadow.mapSize.width = 4096;
-        keyLight.shadow.mapSize.height = 4096;
+        keyLight.shadow.mapSize.width = 1024; // OPTIMIZATION: Reduced from 4096 for mobile performance
+        keyLight.shadow.mapSize.height = 1024; // OPTIMIZATION: Reduced from 4096 for mobile performance
         keyLight.shadow.camera.near = 0.5;
         keyLight.shadow.camera.far = 100;
         keyLight.shadow.camera.left = -50;
@@ -298,7 +298,7 @@ class EpicScene {
     }
 
     createAtmosphere() {
-        const particleCount = 1500;
+        const particleCount = 500; // OPTIMIZATION: Reduced from 1500 for performance
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const velocities = new Float32Array(particleCount * 3);
@@ -393,7 +393,9 @@ class EpicScene {
 
         const bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.3, 0.8, 0.1
+            0.2, // OPTIMIZATION: Strength reduced from 0.3
+            0.5, // OPTIMIZATION: Radius reduced from 0.8
+            0.1
         );
         this.composer.addPass(bloomPass);
 
@@ -478,6 +480,9 @@ class EpicScene {
     }
 
     // Public method to trigger spirit effect
+    // TODO: OPTIMIZE: This method creates many objects at once, causing performance stalls.
+    // Implement an object pooling strategy for spirit particles, magic circles, and energy trails
+    // to reuse objects instead of creating and destroying them.
     releaseSpiritEffect() {
         if (!this.soldier) return;
 
@@ -490,7 +495,7 @@ class EpicScene {
     }
 
     createSpiritParticles() {
-        const particleCount = 1000;
+        const particleCount = 200; // OPTIMIZATION: Reduced from 1000 for performance
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const velocities = new Float32Array(particleCount * 3);
